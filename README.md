@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rolyang Admin Dashboard
 
-## Getting Started
+The official Admin Dashboard for the **Rolyang Music App**. 
+This project is an internal management tool designed to have direct access to the main Rolyang Supabase database, allowing administrators to manage users, artists, tracks, and marketing banners with ease.
 
-First, run the development server:
+## Tech Stack
+- **Framework:** Next.js (App Router)
+- **Styling:** Tailwind CSS & Custom UI Components
+- **Backend & Storage:** Supabase (Service Role)
+- **Authentication:** Custom Master Password (Cookie-based)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Connection to Rolyang App
+This dashboard shares the same Supabase backend as the main Rolyang Music App. Changes made in this dashboard instantly reflect in the mobile app. For example:
+- **Audio Files:** Tracks uploaded here are streamed directly by the mobile app.
+- **User Tiers:** Toggling a user to "Paid" immediately unlocks premium features for them in the Rolyang app.
+- **Featured Banners:** Reordering banners instantly updates the mobile app's home screen carousel.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Setup Instructions
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Configure Environment Variables:
+   Create a `.env` file in the root directory:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   ADMIN_PASSWORD=your_secure_master_password
+   ```
 
-## Learn More
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Documentation
+For detailed architecture and feature breakdowns, see `documentation.md`.
+For future plans and features, see `roadmap.md`.
