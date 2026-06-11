@@ -39,12 +39,14 @@ interface TrackItem {
   durationSeconds: number;
 }
 
-function SortableTrackRow({ track, index, onUpdate, onFileSelected, onRemove }: { track: TrackItem, index: number, onUpdate: (id: string, field: keyof TrackItem, value: any) => void, onFileSelected: (id: string, file: File) => void, onRemove: (id: string) => void }) {
+function SortableTrackRow({ track, index, onUpdate, onFileSelected, onRemove, genres }: { track: TrackItem, index: number, onUpdate: (id: string, field: keyof TrackItem, value: any) => void, onFileSelected: (id: string, file: File) => void, onRemove: (id: string) => void, genres: {id: string, name: string}[] }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: track.id });
   
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [openGenre, setOpenGenre] = useState(false);
+  const selectedGenres = track.genre ? track.genre.split(',').map(g => g.trim()).filter(Boolean) : [];
 
   useEffect(() => {
     if (waveformRef.current && track.file) {
@@ -99,82 +101,71 @@ function SortableTrackRow({ track, index, onUpdate, onFileSelected, onRemove }: 
         placeholder="Track Title"
       />
       
-      {/* 2. Genre (Tag Input) */}
-      <div 
-        className="flex items-center gap-1 flex-wrap h-auto min-h-[40px] px-2 py-1 text-sm border border-white/10 rounded-md bg-black/20 backdrop-blur-md focus-within:ring-1 focus-within:ring-ring w-48 shrink-0"
-        onClick={() => document.getElementById(`genre-input-${track.id}`)?.focus()}
-      >
-        {track.genre.split(',').map(g => g.trim()).filter(Boolean).map((genreTag, idx) => (
-          <span key={idx} className="flex items-center gap-1 bg-purple-100 text-purple-950 px-2.5 py-0.5 rounded-full text-xs font-medium">
-            {genreTag}
-            <button 
-              type="button" 
-              className="text-purple-400 hover:text-purple-700 focus:outline-none font-bold text-sm leading-none ml-0.5"
-              onClick={(e) => {
-                e.stopPropagation();
-                const newGenres = track.genre.split(',').map(g => g.trim()).filter(g => g !== genreTag);
-                onUpdate(track.id, 'genre', newGenres.join(', '));
-              }}
-            >
-              &times;
-            </button>
-          </span>
-        ))}
-        <input 
-          id={`genre-input-${track.id}`}
-          type="text"
-          className="flex-1 min-w-[60px] outline-none bg-transparent border-none p-0 text-sm focus:ring-0"
-          placeholder={track.genre ? "" : "Genre"}
-          list="genre-options"
-          autoComplete="off"
-          onKeyDown={(e) => {
-            if (e.key === ',' || e.key === 'Enter') {
-              e.preventDefault();
-              const val = e.currentTarget.value.trim().replace(/,/g, '');
-              if (val) {
-                const currentGenres = track.genre ? track.genre.split(',').map(g => g.trim()).filter(Boolean) : [];
-                if (!currentGenres.includes(val) && currentGenres.length < 3) {
-                  onUpdate(track.id, 'genre', currentGenres.concat(val).join(', '));
-                } else if (currentGenres.length >= 3) {
-                  alert("Maximum 3 genres allowed per track.");
-                }
-                e.currentTarget.value = '';
-              }
-            } else if (e.key === 'Backspace' && e.currentTarget.value === '') {
-              // Remove last tag on backspace
-              const currentGenres = track.genre ? track.genre.split(',').map(g => g.trim()).filter(Boolean) : [];
-              if (currentGenres.length > 0) {
-                currentGenres.pop();
-                onUpdate(track.id, 'genre', currentGenres.join(', '));
-              }
-            }
-          }}
-          onBlur={(e) => {
-            const val = e.currentTarget.value.trim().replace(/,/g, '');
-            if (val) {
-              const currentGenres = track.genre ? track.genre.split(',').map(g => g.trim()).filter(Boolean) : [];
-              if (!currentGenres.includes(val) && currentGenres.length < 3) {
-                onUpdate(track.id, 'genre', currentGenres.concat(val).join(', '));
-              }
-              e.currentTarget.value = '';
-            }
-          }}
-          onChange={(e) => {
-            if (e.target.value.includes(',')) {
-              const val = e.target.value.trim().replace(/,/g, '');
-              if (val) {
-                const currentGenres = track.genre ? track.genre.split(',').map(g => g.trim()).filter(Boolean) : [];
-                if (!currentGenres.includes(val) && currentGenres.length < 3) {
-                  onUpdate(track.id, 'genre', currentGenres.concat(val).join(', '));
-                } else if (currentGenres.length >= 3) {
-                  alert("Maximum 3 genres allowed per track.");
-                }
-              }
-              e.target.value = '';
-            }
-          }}
-        />
-      </div>
+      {/* 2. Genre (Popover) */}
+      <Popover open={openGenre} onOpenChange={setOpenGenre}>
+        <PopoverTrigger asChild>
+          <div className="flex items-center gap-1 flex-wrap h-auto min-h-[40px] px-2 py-1 text-sm border border-white/10 rounded-md bg-black/20 backdrop-blur-md cursor-pointer hover:bg-white/5 w-48 shrink-0">
+            {selectedGenres.length > 0 ? (
+              selectedGenres.map((genreTag, idx) => (
+                <span key={idx} className="flex items-center gap-1 bg-purple-100 text-purple-950 px-2.5 py-0.5 rounded-full text-xs font-medium" onClick={e => e.stopPropagation()}>
+                  {genreTag}
+                  <button 
+                    type="button" 
+                    className="text-purple-400 hover:text-purple-700 focus:outline-none font-bold text-sm leading-none ml-0.5"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const newGenres = selectedGenres.filter(g => g !== genreTag);
+                      onUpdate(track.id, 'genre', newGenres.join(', '));
+                    }}
+                  >
+                    &times;
+                  </button>
+                </span>
+              ))
+            ) : (
+              <span className="text-zinc-500 text-sm ml-1">Select Genres...</span>
+            )}
+          </div>
+        </PopoverTrigger>
+        <PopoverContent className="w-48 p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search genre..." />
+            <CommandList>
+              <CommandEmpty>No genre found.</CommandEmpty>
+              <CommandGroup>
+                {genres.map((genre) => (
+                  <CommandItem
+                    key={genre.id}
+                    value={genre.name}
+                    onSelect={() => {
+                      const exactName = genre.name;
+                      if (selectedGenres.includes(exactName)) {
+                        const newGenres = selectedGenres.filter(g => g !== exactName);
+                        onUpdate(track.id, 'genre', newGenres.join(', '));
+                      } else {
+                        if (selectedGenres.length < 3) {
+                          onUpdate(track.id, 'genre', [...selectedGenres, exactName].join(', '));
+                        } else {
+                          alert("Maximum 3 genres allowed per track.");
+                        }
+                      }
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedGenres.includes(genre.name) ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {genre.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
 
       {/* 3. Lyrics (Dialog) */}
       <Dialog>
@@ -747,6 +738,7 @@ export default function UploadForm() {
                           onUpdate={updateTrackField}
                           onFileSelected={handleFileSelectedForTrack}
                           onRemove={removeTrack}
+                          genres={genres}
                         />
                       ))}
                     </div>
