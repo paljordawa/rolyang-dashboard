@@ -93,9 +93,17 @@ export async function deleteStorageFile(bucket: string, path: string) {
   return { success: true };
 }
 
-export async function createGenre(genreData: { id: string, name: string }) {
+export async function createGenre(genreData: { id: string, name: string, image_url?: string }) {
   const { error } = await supabaseAdmin.from("genres").insert(genreData);
   if (error) throw new Error(error.message);
+  revalidatePath("/genres");
+  return { success: true };
+}
+
+export async function updateGenre(id: string, genreData: { name?: string, image_url?: string }) {
+  const { error } = await supabaseAdmin.from("genres").update(genreData).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/genres");
   return { success: true };
 }
 

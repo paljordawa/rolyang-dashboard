@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
-import { createGenre, deleteGenre } from '@/app/actions';
-import { Tags, Plus, Trash2, Search, Loader2, Disc3 } from 'lucide-react';
+import { createGenre, deleteGenre, updateGenre } from '@/app/actions';
+import { Tags, Plus, Trash2, Search, Loader2, Disc3, ImagePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -58,6 +58,31 @@ export default function GenreManagerClient({ initialGenres, allTracks }: { initi
       await deleteGenre(id);
       setGenres(genres.filter(g => g.id !== id));
       if (selectedGenreId === id) setSelectedGenreId(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    setError(null);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${id}-${Math.random()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage.from('media').upload(`genres/${fileName}`, file);
+      if (uploadError) throw new Error(uploadError.message);
+
+      const { data: urlData } = supabase.storage.from('media').getPublicUrl(`genres/${fileName}`);
+      const image_url = urlData.publicUrl;
+
+      await updateGenre(id, { image_url });
+      setGenres(genres.map(g => g.id === id ? { ...g, image_url } : g));
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -123,18 +148,47 @@ export default function GenreManagerClient({ initialGenres, allTracks }: { initi
                       onClick={() => setSelectedGenreId(genre.id)}
                       className={`flex-1 flex items-center justify-between p-3 rounded-lg border transition-all text-left ${isSelected ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-100' : 'bg-black/20 border-white/5 text-zinc-400 hover:bg-white/5 hover:text-white'}`}
                     >
-                      <span className="font-medium text-sm">{genre.name}</span>
+                      <div className="flex items-center gap-3">
+                        {genre.image_url ? (
+                          <img src={genre.image_url} alt={genre.name} className="w-6 h-6 rounded-md object-cover" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center">
+                            <Tags className="w-3 h-3 text-zinc-500" />
+                          </div>
+                        )}
+                        <span className="font-medium text-sm">{genre.name}</span>
+                      </div>
                       <span className="text-xs bg-black/40 px-2 py-1 rounded-full">{count}</span>
                     </button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => handleDeleteGenre(genre.id, genre.name)}
-                      disabled={loading}
-                      className="bg-black/20 border-white/5 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/50 text-zinc-500 px-3 h-auto"
-                      title="Delete Genre"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    
+                    <div className="flex flex-col gap-1">
+                      <div className="relative">
+                        <Button 
+                          variant="outline" 
+                          disabled={loading}
+                          className="bg-black/20 border-white/5 hover:bg-emerald-500/20 hover:text-emerald-400 hover:border-emerald-500/50 text-zinc-500 px-3 h-6 text-xs w-full justify-center"
+                          title="Upload Image"
+                        >
+                          <ImagePlus className="w-3 h-3" />
+                        </Button>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={(e) => handleImageUpload(genre.id, e)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          disabled={loading}
+                        />
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => handleDeleteGenre(genre.id, genre.name)}
+                        disabled={loading}
+                        className="bg-black/20 border-white/5 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/50 text-zinc-500 px-3 h-6 text-xs w-full justify-center"
+                        title="Delete Genre"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                 );
               })}
