@@ -39,7 +39,7 @@ interface TrackItem {
   durationSeconds: number;
 }
 
-function SortableTrackRow({ track, index, onUpdate, onFileSelected, onRemove, genres }: { track: TrackItem, index: number, onUpdate: (id: string, field: keyof TrackItem, value: any) => void, onFileSelected: (id: string, file: File) => void, onRemove: (id: string) => void, genres: {id: string, name: string}[] }) {
+function SortableTrackRow({ track, index, onUpdate, onFileSelected, onRemove, genres, showRemove }: { track: TrackItem, index: number, onUpdate: (id: string, field: keyof TrackItem, value: any) => void, onFileSelected: (id: string, file: File) => void, onRemove: (id: string) => void, genres: {id: string, name: string}[], showRemove: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: track.id });
   
   const waveformRef = useRef<HTMLDivElement>(null);
@@ -246,9 +246,11 @@ function SortableTrackRow({ track, index, onUpdate, onFileSelected, onRemove, ge
       </div>
 
       {/* Trash */}
-      <Button type="button" variant="ghost" size="icon" className="text-zinc-400 hover:text-red-500 hover:bg-red-50 shrink-0" onClick={() => onRemove(track.id)}>
-        <Trash2 className="w-4 h-4" />
-      </Button>
+      {showRemove && (
+        <Button type="button" variant="ghost" size="icon" className="text-zinc-400 hover:text-red-500 hover:bg-red-50 shrink-0" onClick={() => onRemove(track.id)}>
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      )}
     </div>
   );
 }
@@ -259,6 +261,7 @@ export default function UploadForm() {
   const [error, setError] = useState<string | null>(null);
 
   // Form State
+  const [releaseType, setReleaseType] = useState<'album' | 'single'>('album');
   const [artists, setArtists] = useState<Artist[]>([]);
   const [artistComboboxOpen, setArtistComboboxOpen] = useState(false);
   const [selectedArtistId, setSelectedArtistId] = useState('');
@@ -298,6 +301,26 @@ export default function UploadForm() {
       durationSeconds: 0
     }
   ]);
+
+  useEffect(() => {
+    if (releaseType === 'single') {
+      setTracks(prev => {
+        if (prev.length === 0) {
+          return [{
+            id: crypto.randomUUID(),
+            file: null,
+            title: '',
+            genre: '',
+            color: '#4f46e5',
+            lyricsText: '',
+            durationString: null,
+            durationSeconds: 0
+          }];
+        }
+        return [prev[0]];
+      });
+    }
+  }, [releaseType]);
 
   const [genres, setGenres] = useState<{id: string, name: string}[]>([]);
 
@@ -487,9 +510,17 @@ export default function UploadForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedArtistId || !albumTitle || !coverFile || tracks.length === 0) {
-      setError('Please select an artist, fill out required fields, upload a cover, and add tracks.');
-      return;
+    
+    if (releaseType === 'album') {
+      if (!selectedArtistId || !albumTitle || !coverFile || tracks.length === 0) {
+        setError('Please select an artist, fill out the album title, upload a cover art, and add tracks.');
+        return;
+      }
+    } else {
+      if (!selectedArtistId || !coverFile || tracks.length === 0 || !tracks[0].title) {
+        setError('Please select an artist, fill out the single track title, and upload a cover art.');
+        return;
+      }
     }
 
     const missingFiles = tracks.some(t => !t.file);
@@ -504,29 +535,73 @@ export default function UploadForm() {
 
     try {
       const artistSlug = selectedArtistId;
-      const albumSlug = `${artistSlug}-${toSlug(albumTitle)}`;
-      const folderPath = `${artistSlug}/${releaseYear ? `${releaseYear}-` : ''}${toSlug(albumTitle)}`;
 
-      const coverExt = coverFile.name.split('.').pop();
-      const coverUrl = await handleUploadFile(coverFile, `${folderPath}/cover.${coverExt}`);
+      if (releaseType === 'album') {
+        const albumSlug = `${artistSlug}-${toSlug(albumTitle)}`;
+        const folderPath = `artists/${artistSlug}/${releaseYear ? `${releaseYear}-` : ''}${toSlug(albumTitle)}`;
 
-      await createAlbum({
-        id: albumSlug,
-        title: albumTitle,
-        artist_id: artistSlug,
-        year: releaseYear || null,
-        cover_url: coverUrl
-      });
+        const coverExt = coverFile.name.split('.').pop();
+        const coverUrl = await handleUploadFile(coverFile, `${folderPath}/cover.${coverExt}`);
 
-      const tracksToInsert = [];
-      for (let i = 0; i < tracks.length; i++) {
-        const track = tracks[i];
+        await createAlbum({
+          id: albumSlug,
+          title: albumTitle,
+          artist_id: artistSlug,
+          year: releaseYear || null,
+          cover_url: coverUrl
+        });
+
+        const tracksToInsert = [];
+        for (let i = 0; i < tracks.length; i++) {
+          const track = tracks[i];
+          const file = track.file as File;
+          
+          const trackNum = i + 1;
+          const trackSlug = `${albumSlug}-t${trackNum}`;
+          const audioUrl = await handleUploadFile(file, `${folderPath}/${trackNum}-${file.name}`);
+
+          const parsedLyrics = parseLyrics(track.lyricsText);
+
+          const trackGenreIds: string[] = [];
+          if (track.genre) {
+            const names = track.genre.split(',').map(g => g.trim()).filter(Boolean);
+            names.forEach(name => {
+              const found = genres.find(g => g.name.toLowerCase() === name.toLowerCase());
+              if (found) {
+                trackGenreIds.push(found.id);
+              }
+            });
+          }
+
+          tracksToInsert.push({
+            id: trackSlug,
+            title: track.title, 
+            artist_id: artistSlug,
+            album_id: albumSlug,
+            duration: track.durationSeconds,
+            genre_ids: trackGenreIds, 
+            audio_url: audioUrl,
+            color: track.color, 
+            lyrics: parsedLyrics 
+          });
+        }
+
+        await createTracks(tracksToInsert);
+      } else {
+        // Single release upload flow
+        const track = tracks[0];
         const file = track.file as File;
+        const singleTitle = track.title;
+        const trackSlug = `${artistSlug}-${toSlug(singleTitle)}`;
         
-        const trackNum = i + 1;
-        const trackSlug = `${albumSlug}-t${trackNum}`;
-        const audioUrl = await handleUploadFile(file, `${folderPath}/${trackNum}-${file.name}`);
-
+        const folderPath = `artists/${artistSlug}/singles`;
+        
+        const coverExt = coverFile.name.split('.').pop();
+        const audioExt = file.name.split('.').pop();
+        
+        const coverUrl = await handleUploadFile(coverFile, `${folderPath}/${trackSlug}-cover.${coverExt}`);
+        const audioUrl = await handleUploadFile(file, `${folderPath}/${trackSlug}-audio.${audioExt}`);
+        
         const parsedLyrics = parseLyrics(track.lyricsText);
 
         const trackGenreIds: string[] = [];
@@ -540,25 +615,38 @@ export default function UploadForm() {
           });
         }
 
-        tracksToInsert.push({
+        const trackToInsert = {
           id: trackSlug,
-          title: track.title, 
+          title: singleTitle,
           artist_id: artistSlug,
-          album_id: albumSlug,
+          album_id: null, // No album link!
+          cover_url: coverUrl, // Single-specific cover art
+          year: releaseYear || null,
           duration: track.durationSeconds,
-          genre_ids: trackGenreIds, 
+          genre_ids: trackGenreIds,
           audio_url: audioUrl,
-          color: track.color, 
-          lyrics: parsedLyrics 
-        });
-      }
+          color: track.color,
+          lyrics: parsedLyrics
+        };
 
-      await createTracks(tracksToInsert);
-      
+        await createTracks([trackToInsert]);
+      }
 
       setSuccess(true);
       setAlbumTitle(''); setReleaseYear('');
-      setCoverFile(null); setTracks([]);
+      setCoverFile(null); 
+      setTracks([
+        {
+          id: crypto.randomUUID(),
+          file: null,
+          title: '',
+          genre: '',
+          color: '#4f46e5',
+          lyricsText: '',
+          durationString: null,
+          durationSeconds: 0
+        }
+      ]);
     } catch (err: any) {
       setError(err.message);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -604,6 +692,34 @@ export default function UploadForm() {
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 pt-0">
               
               <div className="space-y-5">
+                <div className="space-y-2">
+                  <Label>Release Type</Label>
+                  <div className="flex bg-black/40 p-1 rounded-md border border-white/10 w-full max-w-[200px]">
+                    <button
+                      type="button"
+                      onClick={() => setReleaseType('album')}
+                      className={`flex-1 text-center py-1.5 rounded-sm text-xs font-semibold transition-all ${
+                        releaseType === 'album'
+                          ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-xl'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      Album
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReleaseType('single')}
+                      className={`flex-1 text-center py-1.5 rounded-sm text-xs font-semibold transition-all ${
+                        releaseType === 'single'
+                          ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-xl'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      Single
+                    </button>
+                  </div>
+                </div>
+
                 <div className="space-y-2 flex flex-col relative" ref={dropdownRef}>
                   <Label>Artist <span className="text-red-500">*</span></Label>
                   <div className="relative">
@@ -658,10 +774,12 @@ export default function UploadForm() {
                   )}
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="albumTitle">Album Title <span className="text-red-500">*</span></Label>
-                  <Input id="albumTitle" value={albumTitle} onChange={e => setAlbumTitle(e.target.value)} required placeholder="e.g. Starboy" className="bg-black/40/50" />
-                </div>
+                {releaseType === 'album' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="albumTitle">Album Title <span className="text-red-500">*</span></Label>
+                    <Input id="albumTitle" value={albumTitle} onChange={e => setAlbumTitle(e.target.value)} required placeholder="e.g. Starboy" className="bg-black/40/50" />
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="releaseYear">Release Year</Label>
@@ -739,17 +857,20 @@ export default function UploadForm() {
                           onFileSelected={handleFileSelectedForTrack}
                           onRemove={removeTrack}
                           genres={genres}
+                          showRemove={tracks.length > 1 && releaseType === 'album'}
                         />
                       ))}
                     </div>
                   </SortableContext>
                 </DndContext>
 
-                <div className="mt-5 border-t border-dashed border-white/10 pt-5 flex justify-center">
-                  <Button type="button" onClick={addNewEmptyTrackRow} variant="outline" className="border-dashed border-white/20 text-zinc-700 hover:text-indigo-700 hover:bg-fuchsia-500/10 w-full max-w-[300px]">
-                    <PlusCircle className="w-4 h-4 mr-2" /> + Add more Track
-                  </Button>
-                </div>
+                {releaseType === 'album' && (
+                  <div className="mt-5 border-t border-dashed border-white/10 pt-5 flex justify-center">
+                    <Button type="button" onClick={addNewEmptyTrackRow} variant="outline" className="border-dashed border-white/20 text-zinc-700 hover:text-indigo-700 hover:bg-fuchsia-500/10 w-full max-w-[300px]">
+                      <PlusCircle className="w-4 h-4 mr-2" /> + Add more Track
+                    </Button>
+                  </div>
+                )}
               </div>
 
             </CardContent>
