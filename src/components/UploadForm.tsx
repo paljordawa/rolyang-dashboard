@@ -594,7 +594,7 @@ export default function UploadForm() {
         const singleTitle = track.title;
         const trackSlug = `${artistSlug}-${toSlug(singleTitle)}`;
         
-        const folderPath = `artists/${artistSlug}/singles`;
+        const folderPath = `artists/${artistSlug}/${releaseYear ? `${releaseYear}-` : ''}singles`;
         
         const coverExt = coverFile.name.split('.').pop();
         const audioExt = file.name.split('.').pop();
