@@ -23,7 +23,15 @@ export async function createArtist(artistData: {
 // Banners
 // ==========================================
 
-export async function createBanner(bannerData: { title: string; image_url: string; link_url?: string; is_active?: boolean; sort_order?: number }) {
+export async function createBanner(bannerData: { 
+  title: string; 
+  image_url: string; 
+  link_url?: string; 
+  is_active?: boolean; 
+  sort_order?: number;
+  start_date?: string | null;
+  end_date?: string | null;
+}) {
   const { error } = await supabaseAdmin.from('banners').insert(bannerData);
   if (error) throw new Error(error.message);
   revalidatePath('/');
@@ -31,7 +39,19 @@ export async function createBanner(bannerData: { title: string; image_url: strin
   return { success: true };
 }
 
-export async function updateBanner(id: string, updates: Partial<{ title: string; image_url: string; link_url: string; is_active: boolean; sort_order: number }>) {
+export async function updateBanner(
+  id: string, 
+  updates: Partial<{ 
+    title: string; 
+    image_url: string; 
+    link_url: string; 
+    is_active: boolean; 
+    sort_order: number;
+    start_date?: string | null;
+    end_date?: string | null;
+    click_count?: number;
+  }>
+) {
   const { error } = await supabaseAdmin.from('banners').update(updates).eq('id', id);
   if (error) throw new Error(error.message);
   revalidatePath('/');
@@ -42,6 +62,27 @@ export async function updateBanner(id: string, updates: Partial<{ title: string;
 export async function deleteBanner(id: string) {
   const { error } = await supabaseAdmin.from('banners').delete().eq('id', id);
   if (error) throw new Error(error.message);
+  revalidatePath('/');
+  revalidatePath('/banners');
+  return { success: true };
+}
+
+export async function registerBannerClick(id: string) {
+  const { data, error: selectErr } = await supabaseAdmin
+    .from('banners')
+    .select('click_count')
+    .eq('id', id)
+    .single();
+
+  if (selectErr) throw new Error(selectErr.message);
+
+  const { error: updateErr } = await supabaseAdmin
+    .from('banners')
+    .update({ click_count: (data?.click_count || 0) + 1 })
+    .eq('id', id);
+
+  if (updateErr) throw new Error(updateErr.message);
+
   revalidatePath('/');
   revalidatePath('/banners');
   return { success: true };

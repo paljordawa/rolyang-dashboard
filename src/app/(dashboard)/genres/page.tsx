@@ -23,7 +23,7 @@ export default async function GenresPage() {
   });
 
   return (
-    <div className="max-w-6xl mx-auto py-10 px-8">
+    <div className="w-full py-10 px-8">
       <div className="mb-8">
         <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2">
           Genre <span className="text-gradient">Management</span>

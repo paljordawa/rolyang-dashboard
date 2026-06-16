@@ -35,7 +35,7 @@ export default async function ArtistDetailsPage({ params }: { params: Promise<{ 
     .order('created_at', { ascending: false });
 
   return (
-    <div className="w-full max-w-6xl mx-auto py-8 px-6">
+    <div className="w-full py-8 px-6">
       
       <div className="mb-6">
         <Link href="/artists" className="inline-flex items-center text-sm font-medium text-zinc-400 hover:text-white transition-colors">

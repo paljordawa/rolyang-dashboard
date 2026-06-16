@@ -25,7 +25,7 @@ export default async function AlbumsPage() {
   }));
 
   return (
-    <div className="w-full max-w-6xl mx-auto py-8 px-6">
+    <div className="w-full w-full py-8 px-6">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-950">Album Directory</h1>
