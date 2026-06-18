@@ -20,8 +20,11 @@ import {
   ExternalLink,
   ChevronRight,
   Languages,
-  MousePointerClick
+  MousePointerClick,
+  Activity,
+  BarChart2
 } from 'lucide-react';
+import SystemDiagnosticsClient from '../diagnostics/SystemDiagnosticsClient';
 
 interface TrackStats {
   id: string;
@@ -66,6 +69,11 @@ export default function AnalyticsPage() {
   const [adminGenres, setAdminGenres] = useState<any[]>([]);
   const [adminGrowthData, setAdminGrowthData] = useState<any[]>([]);
 
+  // Admin Diagnostics integration states
+  const [adminActiveTab, setAdminActiveTab] = useState<'analytics' | 'diagnostics'>('analytics');
+  const [adminPlays, setAdminPlays] = useState<any[]>([]);
+  const [adminTracks, setAdminTracks] = useState<any[]>([]);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -96,12 +104,26 @@ export default function AnalyticsPage() {
         // Fetch tracks details
         const { data: allTracks } = await supabase
           .from('tracks')
-          .select('id, title, cover_url, status, created_at');
+          .select('id, title, cover_url, status, artist_id, created_at');
         const totalTracks = allTracks?.length || 0;
 
         const tracksApproved = allTracks?.filter((t: any) => t.status === 'approved').length || 0;
         const tracksPending = allTracks?.filter((t: any) => t.status === 'pending').length || 0;
         const tracksRejected = allTracks?.filter((t: any) => t.status === 'rejected').length || 0;
+
+        // Fetch track plays for diagnostics
+        const { data: playsData } = await supabase
+          .from('track_plays')
+          .select('*')
+          .order('played_at', { ascending: false });
+        setAdminPlays(playsData || []);
+        
+        // Save admin tracks for the simulator
+        setAdminTracks((allTracks || []).map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          artist_id: t.artist_id || ''
+        })));
 
         // Fetch applications details
         const { data: allApps } = await supabase
@@ -278,23 +300,44 @@ export default function AnalyticsPage() {
   // ==========================================
   if (userRole === 'admin') {
     return (
-      <div className="w-full py-10 px-8">
-        <div className="mb-10 flex justify-between items-center flex-wrap gap-4">
+      <div className="w-full py-8 px-6 space-y-6">
+        {/* Simplified Admin Header & Tab Selectors */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-4">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2">
-              Platform <span className="text-gradient">Analytics</span>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
+              <BarChart2 className="w-8 h-8 text-violet-400" />
+              Insights & Telemetry
             </h1>
-            <p className="text-zinc-400 text-lg max-w-2xl">
-              Platform-wide performance statistics, growth charts, active promotions, and storage consumption.
+            <p className="text-zinc-400 mt-1">
+              {adminActiveTab === 'analytics' ? 'Review platform growth, banner performance, and genre popularity' : 'Monitor transcoding queues and storage footprint'}
             </p>
           </div>
-          <Button onClick={loadData} variant="outline" className="border-white/10 text-white hover:bg-white/5 cursor-pointer">
-            Refresh Data
-          </Button>
+          
+          <div className="flex bg-white/5 border border-white/10 p-1 rounded-xl gap-2 overflow-x-auto items-center self-start md:self-auto">
+            <button
+              onClick={() => setAdminActiveTab('analytics')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${adminActiveTab === 'analytics' ? 'bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 text-fuchsia-300 border border-violet-500/20 shadow-[inset_0_0_15px_rgba(139,92,246,0.1)]' : 'text-zinc-400 hover:text-white border border-transparent'}`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              Streaming Analytics
+            </button>
+            <button
+              onClick={() => setAdminActiveTab('diagnostics')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${adminActiveTab === 'diagnostics' ? 'bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 text-fuchsia-300 border border-violet-500/20 shadow-[inset_0_0_15px_rgba(139,92,246,0.1)]' : 'text-zinc-400 hover:text-white border border-transparent'}`}
+            >
+              <Activity className="w-4 h-4" />
+              System Diagnostics
+            </button>
+            <Button onClick={loadData} variant="outline" className="border-white/10 text-white hover:bg-white/5 cursor-pointer text-xs h-9 ml-2">
+              Refresh
+            </Button>
+          </div>
         </div>
 
-        {/* Overview Metric Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        {adminActiveTab === 'analytics' ? (
+          <>
+            {/* Overview Metric Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           <Card className="glass-card border-none relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
@@ -636,8 +679,18 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
           </div>
-
         </div>
+      </>
+        ) : (
+          <SystemDiagnosticsClient
+            allTracks={adminTracks}
+            initialPlays={adminPlays}
+            storageStats={{
+              filesCount: adminStats.totalTracks,
+              totalBytes: adminStats.storageMB * 1024 * 1024
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -646,17 +699,8 @@ export default function AnalyticsPage() {
   // RENDER ARTIST PERFORMANCE ANALYTICS
   // ==========================================
   return (
-    <div className="w-full py-10 px-8">
-      <div className="mb-10 flex justify-between items-end flex-wrap gap-4">
-        <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2">
-            Performance <span className="text-gradient">Analytics</span>
-          </h1>
-          <p className="text-zinc-400 text-lg max-w-2xl">
-            Track your music catalog, followers, and engagement metrics.
-          </p>
-        </div>
-      </div>
+    <div className="w-full py-8 px-6">
+
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">

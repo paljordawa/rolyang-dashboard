@@ -7,7 +7,8 @@ const env = fs.readFileSync('.env', 'utf8').split('\n').reduce((acc, line) => {
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 async function run() {
-  const { data, error } = await supabase.from('tracks').select('id, title, artist_id, audio_url, cover_url, lyrics, albums(cover_url)');
-  console.log('anon join fetch tracks:', data, error);
+  const { data, error } = await supabase.from('tracks').select('*');
+  console.log('anon fetch tracks:', data, error);
 }
 run();
+

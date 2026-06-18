@@ -25,14 +25,10 @@ export default async function AlbumsPage() {
   }));
 
   return (
-    <div className="w-full w-full py-8 px-6">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-950">Album Directory</h1>
-          <p className="text-zinc-500 mt-1 text-base">Manage all releases across your catalog.</p>
-        </div>
-        <Link href="/upload" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors bg-indigo-600 text-white shadow hover:bg-indigo-700 h-9 px-4 py-2">
-          <Upload className="w-4 h-4 mr-2" />
+    <div className="w-full py-8 px-6 space-y-6">
+      <div className="flex justify-end items-center pb-4 border-b border-white/10 flex-wrap gap-4">
+        <Link href="/upload" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-semibold transition-all bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white shadow-lg shadow-violet-500/25 h-9 px-4 py-2 hover:scale-[1.02] active:scale-[0.98] shrink-0">
+          <Upload className="w-3.5 h-3.5 mr-2" />
           New Release
         </Link>
       </div>

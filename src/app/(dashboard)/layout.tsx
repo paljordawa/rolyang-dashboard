@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import NotificationDropdown from "@/components/NotificationDropdown";
+import HeaderTitle from "@/components/HeaderTitle";
 
 export default async function DashboardLayout({
   children,
@@ -70,8 +71,8 @@ export default async function DashboardLayout({
       
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <header className="h-16 glass-panel flex items-center justify-between px-8 z-10 sticky top-0 border-b border-white/5 relative">
-          <h2 className="text-lg font-semibold text-white/90">Dashboard</h2>
+        <header className="min-h-[4rem] py-3 glass-panel flex items-center justify-between px-8 z-10 sticky top-0 border-b border-white/5 relative flex-wrap gap-4">
+          <HeaderTitle />
           
           {/* Centered Artist Info */}
           {(role === "artist" || role === "contributor") && (

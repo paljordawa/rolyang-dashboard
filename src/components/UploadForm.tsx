@@ -100,7 +100,7 @@ function SortableTrackRow({ track, index, onUpdate, onFileSelected, onRemove, ge
         className="h-10 text-sm font-medium border-white/10 shadow-none focus-visible:ring-1 w-48 shrink-0" 
         placeholder="Track Title"
       />
-      
+
       {/* 2. Genre (Popover) */}
       <Popover open={openGenre} onOpenChange={setOpenGenre}>
         <PopoverTrigger asChild>
@@ -264,7 +264,7 @@ export default function UploadForm() {
   const [releaseType, setReleaseType] = useState<'album' | 'single'>('album');
   const [artists, setArtists] = useState<Artist[]>([]);
   const [artistComboboxOpen, setArtistComboboxOpen] = useState(false);
-  const [selectedArtistId, setSelectedArtistId] = useState('');
+  const [selectedArtistIds, setSelectedArtistIds] = useState<string[]>([]);
   
   const [albumTitle, setAlbumTitle] = useState('');
   const [releaseYear, setReleaseYear] = useState('');
@@ -278,7 +278,7 @@ export default function UploadForm() {
   // Files
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
-
+ 
   useEffect(() => {
     if (!coverFile) {
       setCoverPreviewUrl(null);
@@ -288,7 +288,7 @@ export default function UploadForm() {
     setCoverPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [coverFile]);
-
+ 
   const [tracks, setTracks] = useState<TrackItem[]>([
     {
       id: crypto.randomUUID(),
@@ -301,7 +301,7 @@ export default function UploadForm() {
       durationSeconds: 0
     }
   ]);
-
+ 
   useEffect(() => {
     if (releaseType === 'single') {
       setTracks(prev => {
@@ -512,13 +512,13 @@ export default function UploadForm() {
     e.preventDefault();
     
     if (releaseType === 'album') {
-      if (!selectedArtistId || !albumTitle || !coverFile || tracks.length === 0) {
-        setError('Please select an artist, fill out the album title, upload a cover art, and add tracks.');
+      if (selectedArtistIds.length === 0 || !albumTitle || !coverFile || tracks.length === 0) {
+        setError('Please select at least one artist, fill out the album title, upload a cover art, and add tracks.');
         return;
       }
     } else {
-      if (!selectedArtistId || !coverFile || tracks.length === 0 || !tracks[0].title) {
-        setError('Please select an artist, fill out the single track title, and upload a cover art.');
+      if (selectedArtistIds.length === 0 || !coverFile || tracks.length === 0 || !tracks[0].title) {
+        setError('Please select at least one artist, fill out the single track title, and upload a cover art.');
         return;
       }
     }
@@ -534,7 +534,7 @@ export default function UploadForm() {
     setSuccess(false);
 
     try {
-      const artistSlug = selectedArtistId;
+      const artistSlug = selectedArtistIds[0] || 'unknown';
 
       if (releaseType === 'album') {
         const albumSlug = `${artistSlug}-${toSlug(albumTitle)}`;
@@ -546,7 +546,7 @@ export default function UploadForm() {
         await createAlbum({
           id: albumSlug,
           title: albumTitle,
-          artist_id: artistSlug,
+          artist_ids: selectedArtistIds,
           year: releaseYear || null,
           cover_url: coverUrl
         });
@@ -576,7 +576,7 @@ export default function UploadForm() {
           tracksToInsert.push({
             id: trackSlug,
             title: track.title, 
-            artist_id: artistSlug,
+            artist_ids: selectedArtistIds,
             album_id: albumSlug,
             duration: track.durationSeconds,
             genre_ids: trackGenreIds, 
@@ -618,7 +618,7 @@ export default function UploadForm() {
         const trackToInsert = {
           id: trackSlug,
           title: singleTitle,
-          artist_id: artistSlug,
+          artist_ids: selectedArtistIds,
           album_id: null, // No album link!
           cover_url: coverUrl, // Single-specific cover art
           year: releaseYear || null,
@@ -635,6 +635,8 @@ export default function UploadForm() {
       setSuccess(true);
       setAlbumTitle(''); setReleaseYear('');
       setCoverFile(null); 
+      setSelectedArtistIds([]);
+      setSearchQuery('');
       setTracks([
         {
           id: crypto.randomUUID(),
@@ -657,10 +659,7 @@ export default function UploadForm() {
 
   return (
     <div className="w-full max-w-[1600px] mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-white">Upload New Release</h1>
-        <p className="text-zinc-400 mt-2 text-lg">Select an artist and upload their new album or single directly to the database.</p>
-      </div>
+
 
       {error && (
         <Alert variant="destructive" className="mb-6">
@@ -682,23 +681,23 @@ export default function UploadForm() {
         
         {/* Left Column: Metadata */}
         <div className="space-y-6 flex flex-col">
-          <Card className="flex-1 shadow-xl border-white/10">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-xl">
+          <Card className="bg-zinc-900/60 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden rounded-2xl">
+            <CardHeader className="border-b border-white/10 bg-black/20 py-4 px-6">
+              <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
                 <ListMusic className="w-5 h-5 text-zinc-400" />
                 Release Details
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 pt-0">
+            <CardContent className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-6">
               
-              <div className="space-y-5">
+              <div className="lg:col-span-7 space-y-6 flex flex-col justify-center">
                 <div className="space-y-2">
-                  <Label>Release Type</Label>
-                  <div className="flex bg-black/40 p-1 rounded-md border border-white/10 w-full max-w-[200px]">
+                  <Label className="text-zinc-200 font-medium">Release Type</Label>
+                  <div className="flex bg-black/40 p-1 rounded-xl border border-white/10 w-full max-w-[200px]">
                     <button
                       type="button"
                       onClick={() => setReleaseType('album')}
-                      className={`flex-1 text-center py-1.5 rounded-sm text-xs font-semibold transition-all ${
+                      className={`flex-1 text-center py-1.5 rounded-lg text-xs font-semibold transition-all ${
                         releaseType === 'album'
                           ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-xl'
                           : 'text-zinc-400 hover:text-white'
@@ -709,7 +708,7 @@ export default function UploadForm() {
                     <button
                       type="button"
                       onClick={() => setReleaseType('single')}
-                      className={`flex-1 text-center py-1.5 rounded-sm text-xs font-semibold transition-all ${
+                      className={`flex-1 text-center py-1.5 rounded-lg text-xs font-semibold transition-all ${
                         releaseType === 'single'
                           ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-xl'
                           : 'text-zinc-400 hover:text-white'
@@ -720,96 +719,126 @@ export default function UploadForm() {
                   </div>
                 </div>
 
-                <div className="space-y-2 flex flex-col relative" ref={dropdownRef}>
-                  <Label>Artist <span className="text-red-500">*</span></Label>
-                  <div className="relative">
-                    <Input 
-                      placeholder="Type artist name to search..." 
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        setSelectedArtistId('');
-                        setShowDropdown(true);
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2 flex flex-col relative" ref={dropdownRef}>
+                    <Label className="text-zinc-200 font-medium">Artist <span className="text-red-500">*</span></Label>
+                    
+                    <div 
+                      className="min-h-10 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-1.5 text-sm flex flex-wrap gap-1.5 items-center focus-within:ring-1 focus-within:ring-fuchsia-500/50 focus-within:border-fuchsia-500/50 transition-all cursor-text"
+                      onClick={() => {
+                        const inputEl = document.getElementById('artist-search-input');
+                        inputEl?.focus();
                       }}
-                      onFocus={() => setShowDropdown(true)}
-                      className="bg-black/40/50 w-full"
-                    />
-                    {isSearching && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
+                    >
+                      {selectedArtistIds.map(id => {
+                        const artist = artists.find(a => a.id === id);
+                        if (!artist) return null;
+                        return (
+                          <span key={id} className="flex items-center gap-1 bg-violet-500/10 text-violet-300 border border-violet-500/30 px-2.5 py-0.5 rounded-md text-xs font-medium" onClick={e => e.stopPropagation()}>
+                            {artist.name}
+                            <button
+                              type="button"
+                              className="text-violet-400 hover:text-violet-200 focus:outline-none font-bold text-sm leading-none ml-1 cursor-pointer shrink-0"
+                              onClick={() => {
+                                setSelectedArtistIds(prev => prev.filter(item => item !== id));
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      })}
+                      <input 
+                        id="artist-search-input"
+                        type="text"
+                        placeholder={selectedArtistIds.length === 0 ? "Type artist name to search..." : ""}
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setShowDropdown(true);
+                        }}
+                        onFocus={() => setShowDropdown(true)}
+                        className="flex-1 bg-transparent border-0 p-0 text-white placeholder-zinc-500 focus:outline-none focus:ring-0 min-w-[100px] h-6 text-sm"
+                      />
+                      {isSearching && (
+                        <Loader2 className="w-4 h-4 animate-spin text-zinc-400 shrink-0" />
+                      )}
+                    </div>
+                    
+                    {showDropdown && searchQuery.trim() !== '' && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto">
+                        {searchResults.length > 0 ? (
+                          <div className="py-1">
+                            {searchResults.map((artist) => (
+                              <button
+                                key={artist.id}
+                                type="button"
+                                className="w-full text-left px-4 py-2 hover:bg-white/5 flex items-center justify-between text-zinc-300 hover:text-white transition-colors"
+                                onClick={() => {
+                                  if (!selectedArtistIds.includes(artist.id)) {
+                                    setSelectedArtistIds(prev => [...prev, artist.id]);
+                                  }
+                                  setSearchQuery('');
+                                  setShowDropdown(false);
+                                }}
+                              >
+                                <span>{artist.name}</span>
+                                {selectedArtistIds.includes(artist.id) && <Check className="w-4 h-4 text-fuchsia-400" />}
+                              </button>
+                            ))}
+                          </div>
+                        ) : !isSearching ? (
+                          <div className="px-4 py-6 text-center text-sm text-zinc-400">
+                            No artist found matching "{searchQuery}".
+                            <a href="/artists/new" className="block mt-2 text-fuchsia-400 hover:underline font-medium">
+                              <Plus className="w-4 h-4 inline mr-1" />
+                              Create new artist
+                            </a>
+                          </div>
+                        ) : null}
                       </div>
                     )}
                   </div>
-                  
-                  {showDropdown && searchQuery.trim() !== '' && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-black/20 backdrop-blur-md border border-white/10 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-                      {searchResults.length > 0 ? (
-                        <div className="py-1">
-                          {searchResults.map((artist) => (
-                            <button
-                              key={artist.id}
-                              type="button"
-                              className="w-full text-left px-4 py-2 hover:bg-white/10 flex items-center justify-between"
-                              onClick={() => {
-                                setSelectedArtistId(artist.id);
-                                setSearchQuery(artist.name);
-                                setShowDropdown(false);
-                              }}
-                            >
-                              <span>{artist.name}</span>
-                              {selectedArtistId === artist.id && <Check className="w-4 h-4 text-fuchsia-400" />}
-                            </button>
-                          ))}
-                        </div>
-                      ) : !isSearching ? (
-                        <div className="px-4 py-6 text-center text-sm text-zinc-400">
-                          No artist found matching "{searchQuery}".
-                          <a href="/artists/new" className="block mt-2 text-fuchsia-400 hover:underline font-medium">
-                            <Plus className="w-4 h-4 inline mr-1" />
-                            Create new artist
-                          </a>
-                        </div>
-                      ) : null}
-                    </div>
-                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="releaseYear" className="text-zinc-200 font-medium">Release Year</Label>
+                    <Input id="releaseYear" value={releaseYear} onChange={e => setReleaseYear(e.target.value)} placeholder="e.g. 2016" className="bg-black/40 rounded-xl border-white/10 focus-visible:ring-fuchsia-500/50" />
+                  </div>
                 </div>
                 
                 {releaseType === 'album' && (
                   <div className="space-y-2">
-                    <Label htmlFor="albumTitle">Album Title <span className="text-red-500">*</span></Label>
-                    <Input id="albumTitle" value={albumTitle} onChange={e => setAlbumTitle(e.target.value)} required placeholder="e.g. Starboy" className="bg-black/40/50" />
+                    <Label htmlFor="albumTitle" className="text-zinc-200 font-medium">Album Title <span className="text-red-500">*</span></Label>
+                    <Input id="albumTitle" value={albumTitle} onChange={e => setAlbumTitle(e.target.value)} required placeholder="e.g. Starboy" className="bg-black/40 rounded-xl border-white/10 focus-visible:ring-fuchsia-500/50" />
                   </div>
                 )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="releaseYear">Release Year</Label>
-                  <Input id="releaseYear" value={releaseYear} onChange={e => setReleaseYear(e.target.value)} placeholder="e.g. 2016" className="bg-black/40/50" />
-                </div>
               </div>
 
-              <div className="space-y-2 flex flex-col h-full">
-                <Label className="mb-2 block">Cover Art <span className="text-red-500">*</span></Label>
-                <label className="flex-1 flex flex-col items-center justify-center min-h-[260px] border-2 border-dashed border-white/10 rounded-xl bg-black/40 hover:bg-white/10 transition-all cursor-pointer relative overflow-hidden group">
-                  {coverPreviewUrl ? (
-                    <>
-                      <img src={coverPreviewUrl} alt="Cover Preview" className="absolute inset-0 w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <span className="text-white text-sm font-medium">Change Cover</span>
+              <div className="lg:col-span-5 flex flex-col items-center justify-center">
+                <div className="space-y-2 w-full max-w-[320px] flex flex-col">
+                  <Label className="mb-2 block text-zinc-200 font-medium text-center lg:text-left">Cover Art <span className="text-red-500">*</span></Label>
+                  <label className="aspect-square w-full flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-2xl bg-black/40 hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer relative overflow-hidden group">
+                    {coverPreviewUrl ? (
+                      <>
+                        <img src={coverPreviewUrl} alt="Cover Preview" className="absolute inset-0 w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white text-sm font-medium">Change Cover</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center p-4">
+                        <ImageIcon className="w-12 h-12 text-zinc-500 group-hover:text-zinc-300 transition-colors mx-auto mb-3" />
+                        <span className="text-sm font-semibold text-zinc-300 group-hover:text-white transition-colors block mb-1">Upload Cover</span>
+                        <span className="text-xs text-zinc-500 block">JPG, PNG, WEBP</span>
                       </div>
-                    </>
-                  ) : (
-                    <div className="text-center p-4">
-                      <ImageIcon className="w-10 h-10 text-zinc-300 mx-auto mb-3" />
-                      <span className="text-sm font-medium text-zinc-300 block mb-1">Upload Cover</span>
-                      <span className="text-xs text-zinc-400 block">JPG, PNG, WEBP</span>
-                    </div>
-                  )}
-                  <input type="file" accept="image/*" className="hidden" onChange={e => {
-                    if (e.target.files && e.target.files[0]) {
-                      setCoverFile(e.target.files[0]);
-                    }
-                  }} />
-                </label>
+                    )}
+                    <input type="file" accept="image/*" className="hidden" onChange={e => {
+                      if (e.target.files && e.target.files[0]) {
+                        setCoverFile(e.target.files[0]);
+                      }
+                    }} />
+                  </label>
+                </div>
               </div>
               
             </CardContent>

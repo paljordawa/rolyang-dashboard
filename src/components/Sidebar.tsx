@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Music, Upload, Tags, Image as ImageIcon, UserCircle, LogOut, Languages, BarChart2, CheckSquare, User } from 'lucide-react';
+import { Home, Users, Music, Upload, UserCircle, LogOut, Languages, BarChart2, CheckSquare, User, DollarSign, Megaphone, Sliders } from 'lucide-react';
 import { logout } from '@/app/login/actions';
 
 interface NavItem {
@@ -17,13 +17,15 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: Home, roles: ['admin', 'artist', 'contributor'] },
   { label: 'Analytics', href: '/analytics', icon: BarChart2, roles: ['admin', 'artist'] },
   { label: 'Upload Media', href: '/upload', icon: Upload, roles: ['admin', 'artist'] },
+  { label: 'Discography', href: '/discography', icon: Music, roles: ['artist'] },
   { label: 'Lyrics Sync', href: '/lyrics', icon: Languages, roles: ['admin', 'artist', 'contributor'] },
   { label: 'Profile Settings', href: '/profile', icon: User, roles: ['artist', 'contributor'] },
+  { label: 'Curation Hub', href: '/curation', icon: Sliders, roles: ['admin'] },
   { label: 'Moderation Queue', href: '/moderation', icon: CheckSquare, roles: ['admin'] },
   { label: 'Users', href: '/users', icon: UserCircle, roles: ['admin'] },
-  { label: 'Banners', href: '/banners', icon: ImageIcon, roles: ['admin'] },
-  { label: 'Artists', href: '/artists', icon: Users, roles: ['admin'] },
-  { label: 'Genres', href: '/genres', icon: Tags, roles: ['admin'] },
+  { label: 'Artists & Contributors', href: '/artists', icon: Users, roles: ['admin'] },
+  { label: 'Royalties', href: '/royalties', icon: DollarSign, roles: ['admin'] },
+  { label: 'Broadcasts', href: '/notifications', icon: Megaphone, roles: ['admin'] },
 ];
 
 interface SidebarProps {

@@ -34,12 +34,16 @@ interface LyricLine {
   text: string;
 }
 
-export default function LyricsEditor() {
+interface LyricsEditorProps {
+  userId: string | null;
+  userRole: string;
+  artistId: string | null;
+}
+
+export default function LyricsEditor({ userId, userRole, artistId }: LyricsEditorProps) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string>('listener');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Editor states
@@ -72,35 +76,13 @@ export default function LyricsEditor() {
   }, [lyricLines, currentLineIndex, currentTime]);
 
   useEffect(() => {
-    // Fetch user role & tracks on mount
-    const loadSessionAndData = async () => {
+    const loadTracksData = async () => {
       try {
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        setUser(currentUser);
-
-        // Fetch user profile to get role & artist_id
-        let role = 'admin'; // fallback if no auth session but admin cookie is set
-        let artistId = null;
-
-        if (currentUser) {
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', currentUser.id)
-            .single();
-          
-          if (profile) {
-            role = profile.role;
-            artistId = profile.artist_id;
-          }
-        }
-        setUserRole(role);
-
         // Fetch tracks joined with album cover art
         let query = supabase.from('tracks').select('id, title, artist_id, audio_url, cover_url, lyrics, albums(cover_url)');
         
         // If they are an artist, only show their own tracks
-        if (role === 'artist' && artistId) {
+        if (userRole === 'artist' && artistId) {
           query = query.eq('artist_id', artistId);
         }
 
@@ -108,14 +90,14 @@ export default function LyricsEditor() {
         if (error) throw error;
         setTracks(tracksData || []);
       } catch (err: any) {
-        console.error('Error loading session or tracks:', err);
+        console.error('Error loading tracks:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    loadSessionAndData();
-  }, []);
+    loadTracksData();
+  }, [userRole, artistId]);
 
   const handleTrackSelect = (track: Track) => {
     // Reset player states
@@ -227,7 +209,7 @@ export default function LyricsEditor() {
           .from('lyric_submissions')
           .insert({
             track_id: selectedTrack.id,
-            submitted_by: user?.id || null,
+            submitted_by: userId || null,
             language: language,
             lyrics: lyricLines,
             status: 'pending'
@@ -265,15 +247,8 @@ export default function LyricsEditor() {
   }
 
   return (
-    <div className="w-full py-10 px-8">
-      <div className="mb-10">
-        <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2">
-          Lyrics & <span className="text-gradient">Translation Sync</span>
-        </h1>
-        <p className="text-zinc-400 text-lg max-w-2xl">
-          Supply line-by-line synchronized lyrics for the Rolyang audio player.
-        </p>
-      </div>
+    <div className="w-full py-8 px-6 space-y-6">
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Track Selector */}

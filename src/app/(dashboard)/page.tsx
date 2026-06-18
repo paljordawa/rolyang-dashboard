@@ -74,14 +74,8 @@ export default async function Home() {
     const recentTracks = (artistTracks || []).slice(0, 5);
 
     return (
-      <div className="w-full py-10 px-8">
-        <div className="mb-10 flex justify-between items-end flex-wrap gap-4">
-          <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2">
-              Artist <span className="text-gradient">Studio</span>
-            </h1>
-            <p className="text-zinc-400 text-lg max-w-2xl">Manage your releases, synchronize lyrics, and check your reach.</p>
-          </div>
+      <div className="w-full py-8 px-6">
+        <div className="mb-8 flex justify-end items-center flex-wrap gap-4 pb-4 border-b border-white/10">
           <div className="flex gap-3">
             <Link href="/upload">
               <Button className="btn-gradient border-0 shadow-lg shadow-violet-500/20 cursor-pointer">
@@ -278,13 +272,8 @@ export default async function Home() {
     }
 
     return (
-      <div className="w-full py-10 px-8">
-        <div className="mb-10">
-          <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2">
-            Contributor <span className="text-gradient">Workspace</span>
-          </h1>
-          <p className="text-zinc-400 text-lg max-w-2xl">Help translate Tibetan tracks and synchronize lyric timing.</p>
-        </div>
+      <div className="w-full py-8 px-6">
+
 
         {/* Contributor Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 max-w-3xl">
@@ -330,8 +319,8 @@ export default async function Home() {
   // ==========================================
   // RENDER 3: ADMIN GLOBAL DASHBOARD (Default)
   // ==========================================
-  const { count: usersCountObj, error: usersError } = await supabaseAdmin.from('auth.users').select('*', { count: 'exact', head: true });
-  const usersCount = usersError ? 0 : usersCountObj;
+  const { data: authUsersRes, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers();
+  const usersCount = authUsersError ? 0 : (authUsersRes?.users?.length || 0);
   const { count: artistsCount } = await supabaseAdmin.from('artists').select('*', { count: 'exact', head: true });
   const { count: albumsCount } = await supabaseAdmin.from('albums').select('*', { count: 'exact', head: true });
   const { count: tracksCount } = await supabaseAdmin.from('tracks').select('*', { count: 'exact', head: true });
@@ -362,23 +351,8 @@ export default async function Home() {
   const recentContributors = recentContributorsObj || [];
 
   return (
-    <div className="w-full py-10 px-8">
-      <div className="mb-10 flex justify-between items-end flex-wrap gap-4">
-        <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2">
-            Dashboard <span className="text-gradient">Overview</span>
-          </h1>
-          <p className="text-zinc-400 text-lg max-w-2xl">Welcome back to the Rolyang control center. Here is your platform at a glance.</p>
-        </div>
-        <div className="flex gap-3">
-          <Link href="/upload">
-            <Button className="btn-gradient border-0 shadow-lg shadow-indigo-500/20 cursor-pointer">
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Media
-            </Button>
-          </Link>
-        </div>
-      </div>
+    <div className="w-full py-8 px-6">
+
 
       {/* Top Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
@@ -424,13 +398,13 @@ export default async function Home() {
         <Card className="glass-card border-none relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-sm font-medium text-zinc-400">Registered Users</CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-400">Total Users</CardTitle>
             <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
               <Users className="h-4 w-4 text-emerald-400" />
             </div>
           </CardHeader>
           <CardContent className="relative z-10">
-            <div className="text-4xl font-bold text-white">{usersCount === 0 ? 'N/A' : usersCount}</div>
+            <div className="text-4xl font-bold text-white">{usersCount}</div>
           </CardContent>
         </Card>
       </div>

@@ -30,12 +30,18 @@ export default async function ArtistDetailsPage({ params }: { params: Promise<{ 
   // Fetch artist's tracks
   const { data: tracks } = await supabaseAdmin
     .from('tracks')
-    .select('*')
+    .select('*, track_genres(genre_id)')
     .eq('artist_id', id)
     .order('created_at', { ascending: false });
 
+  // Fetch all genres for the edit track dialog
+  const { data: genres } = await supabaseAdmin
+    .from('genres')
+    .select('*')
+    .order('name');
+
   return (
-    <div className="w-full py-8 px-6">
+    <div className="w-full max-w-6xl mx-auto py-8 px-6">
       
       <div className="mb-6">
         <Link href="/artists" className="inline-flex items-center text-sm font-medium text-zinc-400 hover:text-white transition-colors">
@@ -108,9 +114,9 @@ export default async function ArtistDetailsPage({ params }: { params: Promise<{ 
         artistId={artist.id} 
         initialAlbums={albums || []} 
         initialTracks={tracks || []} 
+        genres={genres || []}
       />
 
     </div>
   );
 }
-

@@ -39,13 +39,8 @@ export default async function ProfilePage(props: { searchParams: Promise<{ succe
   }
 
   return (
-    <div className="w-full py-10 px-8">
-      <div className="mb-10">
-        <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2">
-          Profile <span className="text-gradient">Settings</span>
-        </h1>
-        <p className="text-zinc-400 text-lg">Update your stage name, biographical information, and profile picture.</p>
-      </div>
+    <div className="w-full py-8 px-6 space-y-6">
+
 
       <ProfileForm 
         initialProfile={currentProfile} 

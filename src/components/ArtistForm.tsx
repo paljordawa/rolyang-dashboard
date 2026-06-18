@@ -128,10 +128,7 @@ export default function ArtistForm({ initialData }: { initialData?: any }) {
 
   return (
     <div className="w-full max-w-2xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-white">{isEditing ? 'Edit Artist' : 'Add New Artist'}</h1>
-        <p className="text-zinc-400 mt-2 text-lg">{isEditing ? 'Update the artist profile.' : 'Create a new artist profile in the Rolyang database.'}</p>
-      </div>
+
 
       {error && (
         <Alert variant="destructive" className="mb-6">
